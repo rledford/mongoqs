@@ -51,6 +51,7 @@ func toMOp(op string) string {
 
 // toOpValueMap - Reduces a qvalue to a map of operator keys to a slice of the values to cast to their appropriate type
 func toOpValueMap(qvalue string) map[string][]string {
+	// TODO: needs to be fixed to support values that include ':' that aren't preceded by a valid operator (such as dates)
 	result := make(map[string][]string)
 	values := strings.Split(qvalue, ",")
 	currentOp := eq
@@ -63,6 +64,8 @@ func toOpValueMap(qvalue string) map[string][]string {
 			result[currentOp] = append(result[currentOp], parts[0])
 		}
 	}
+
+	// fmt.Println(result)
 
 	return result
 }
