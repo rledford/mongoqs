@@ -25,6 +25,7 @@
   - [Limit](#limit)
   - [Skip](#skip)
 - [Examples](#examples)
+- [Shortcomings](#shortcomings)
 - [Backlog](#backlog)
 
 ## Features
@@ -78,7 +79,6 @@ myFloatField := mongoqs.NewQField("myFloat", mongoqs.QFloat)
 myFloatField.IsSortable().IsProjectable() // same as calls on myIntField but chained
 myBoolField := mongoqs.NewQField("myBool", mongoqs.QBool)
 myDateTimeField := mongoqs.NewQField("myDateTime", mongoqs.QDateTime)
-myDateTimeField.UseTimeLayout("Mon Jan _1 00:00:00 2000", "2000-01-01T00:00:00Z00:00") // will use ANSIC and RFC3339 layouts to parse times
 myObjectIDField := mongoqs.NewQField("myObjectID", mongoqs.QObjectID)
 myObjectIDField.UseAlias("_id", "id") // will use _id and id to refer to myObjectID
 // create a new query processor
@@ -134,7 +134,6 @@ Query fields (QField) are used to build query processors (QProcessor). It is rec
 | Aliases     | []string        | A slice of strings that can be used as aliases for the field's name.                                                                             |
 | Projectable | Bool            | Whether the field is allowed in projections or not.                                                                                              |
 | Sortable    | Bool            | Whether the field is allowed to be used to sort or not.                                                                                          |
-| TimeLayouts | []string        | A slice of strings that can be used when attempting to parse dates and times for this field                                                      |
 
 ### Reserved Fields
 
