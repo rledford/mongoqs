@@ -16,7 +16,6 @@ func TestNewQProcessor(t *testing.T) {
 	myFloatField.IsSortable().IsProjectable() // same as calls on myIntField but chained
 	myBoolField := NewQField("myBool", QBool)
 	myDateTimeField := NewQField("myDateTime", QDateTime)
-	myDateTimeField.UseTimeLayout("Mon Jan _1 00:00:00 2000", "2000-01-01T00:00:00Z") // will use ANSIC and RFC3339 layouts to parse times
 	myObjectIDField := NewQField("myObjectID", QObjectID)
 	myObjectIDField.UseAlias("_id", "id") // will use _id and id to refer to myObjectID
 	// create a new query processor
@@ -25,7 +24,7 @@ func TestNewQProcessor(t *testing.T) {
 	// we'll use the net/url package's Values to construct query to process, but it would be more common to use on from an http request
 	qs := url.Values{}
 	qs.Add("unknown", "nin:1,2,3,4") // a QField was not created for 'unknown' so it will be ignored
-	qs.Add("myString", "in:a,b,c,d")
+	qs.Add("myString", "Hello, world")
 	qs.Add("myInt", "gt:1,lt:10")
 	qs.Add("myFloat", "1.0") // 'eq:' operator is assumed
 	qs.Add("myBool", "false") // 'eq:' operator is assumed
