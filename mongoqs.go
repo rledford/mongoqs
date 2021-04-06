@@ -15,15 +15,15 @@ import (
 )
 
 // comparison operators
-const eq string = "eq" // equal to
-const ne string = "ne" // not equal to
-const gt string = "gt" // greater than
-const gte string = "gte" // greater than or equal to
-const lt string = "lt" // less than
-const lte string = "lte" // less than or equal to
-const in string = "in" // in list of values
-const nin string = "nin" // not in list of values
-const all string = "all" // has all in list of values
+const eq string = "eq:" // equal to
+const ne string = "ne:" // not equal to
+const gt string = "gt:" // greater than
+const gte string = "gte:" // greater than or equal to
+const lt string = "lt:" // less than
+const lte string = "lte:" // less than or equal to
+const in string = "in:" // in list of values
+const nin string = "nin:" // not in list of values
+const all string = "all:" // has all in list of values
 
 // sort operators
 const asc string = "+" // ascending
@@ -34,9 +34,9 @@ const inc string = "+" // include
 const exc string = "-" // exclude
 
 // search operators (string fields only)
-const like string = "like" // includes sequence
-const slike string = "slike" // starts with sequence
-const elike string = "elike" // ends with sequence
+const like string = "like:" // includes sequence
+const slike string = "slike:" // starts with sequence
+const elike string = "elike:" // ends with sequence
 
 // reserved query fields
 const lmt string = "lmt" // MongoDB query limit count
@@ -44,28 +44,37 @@ const skp string = "skp" // MongoDB query skip count
 const srt string = "srt" // MongoDB query sort
 const prj string = "prj" // MongoDB query projection
 
+// qvalue op list
+var oplist []string = []string{eq, ne, gt, gte, lt, lte, in, nin, all, like, slike, elike}
+var opregex *regexp.Regexp = regexp.MustCompile(strings.Join(oplist, "|"))
+
 // toMOp - Adds leading $ to the provided operator
 func toMOp(op string) string {
-	return "$" + op
+	return "$" + op[0:len(op) - 1]
 }
 
-// toOpValueMap - Reduces a qvalue to a map of operator keys to a slice of the values to cast to their appropriate type
-func toOpValueMap(qvalue string) map[string][]string {
-	// TODO: needs to be fixed to support values that include ':' that aren't preceded by a valid operator (such as dates)
+func toOpValueMap(qvalue string, t QType) map[string][]string {
 	result := make(map[string][]string)
-	values := strings.Split(qvalue, ",")
-	currentOp := eq
-	for _, v := range values {
-		parts := strings.Split(v, ":")
-		if len(parts) > 1 {
-			currentOp = parts[0]
-			result[currentOp] = append(result[currentOp], parts[1:]...)
-		} else {
-			result[currentOp] = append(result[currentOp], parts[0])
-		}
-	}
 
-	// fmt.Println(result)
+	opindexes := opregex.FindAllStringIndex(qvalue, len(qvalue))
+	if len(opindexes) > 0 {
+		if opindexes[0][0] > 0 {
+			// operator not found at beginning of qvalue, assuming eq: up to first found operator
+			result[eq] = append(result[eq], strings.Split(strings.TrimSuffix(qvalue[0:opindexes[0][0]], ","),",")...)
+		}
+		for i, oi := range opindexes {
+			op := qvalue[oi[0]:oi[1]]
+			if i + 1 < len(opindexes) {
+				endindex := opindexes[i+1][0]
+				value := strings.Split(strings.TrimSuffix(qvalue[oi[1]:endindex], ","),",")
+				result[op] = append(result[op], value...)
+			} else {
+				result[op] = append(result[op], strings.Split(strings.TrimSuffix(qvalue[oi[1]:], ","),",")...)
+			}
+		}
+	} else {
+		result[eq] = append(result[eq], strings.Split(strings.TrimSuffix(qvalue, ","),",")...)
+	}
 
 	return result
 }
@@ -109,7 +118,7 @@ type QField struct {
 }
 // ApplyFilter - Processes the qvalue as the specified Type and applies the result to the provided out QResult.
 func (f *QField) ApplyFilter(qvalue string, out *QResult) {
-	opValueMap := toOpValueMap(qvalue)
+	opValueMap := toOpValueMap(qvalue, f.Type)
 	result := bson.M{}
 	nfilters := 0
 	for op, values := range opValueMap {
@@ -139,22 +148,10 @@ func (f *QField) ApplyFilter(qvalue string, out *QResult) {
 						result[toMOp(op)] = b
 					}
 				case QDateTime:
-					
-					if len(f.TimeLayouts) > 0 {
-						for _, format := range f.TimeLayouts {
-							d, err := time.Parse(format, v)
-							if err == nil {
-								nfilters++
-								result[toMOp(op)] = d
-								break;
-							}
-						}
-					} else {
-						d, err := time.Parse(time.RFC3339, v)
-						if err == nil {
-							nfilters++
-							result[toMOp(op)] = primitive.NewDateTimeFromTime(d)
-						}
+					d, err := time.Parse(time.RFC3339, v)
+					if err == nil {
+						nfilters++
+						result[toMOp(op)] = primitive.NewDateTimeFromTime(d)
 					}
 				case QObjectID:
 					id, err := primitive.ObjectIDFromHex(v)
@@ -208,19 +205,9 @@ func (f *QField) ApplyFilter(qvalue string, out *QResult) {
 			case QDateTime:
 				vlist := []primitive.DateTime{}
 				for _, v := range values {
-					if len(f.TimeLayouts) > 0 {
-						for _, format := range f.TimeLayouts {
-							d, err := time.Parse(format, v)
-							if err == nil {
-								vlist = append(vlist, primitive.NewDateTimeFromTime(d))
-								break;
-							}
-						}
-					} else {
-						d, err := time.Parse(time.RFC3339, v)
-						if err == nil {
-							vlist = append(vlist, primitive.NewDateTimeFromTime(d))
-						}
+					d, err := time.Parse(time.RFC3339, v)
+					if err == nil {
+						vlist = append(vlist, primitive.NewDateTimeFromTime(d))
 					}
 				}
 				if len(vlist) > 0 {
@@ -294,6 +281,7 @@ func (f *QField) UseAlias(alias ...string) *QField {
 	f.Aliases = append(f.Aliases, alias...)
 	return f
 }
+/*
 // UseTimeLayout - Adds one or more datetime layouts to be used when the QField type is QDateTime. Returns caller for chaining.
 func (f *QField) UseTimeLayout(dtfmt ...string) *QField {
 	if f.Type != QDateTime {
@@ -303,7 +291,7 @@ func (f *QField) UseTimeLayout(dtfmt ...string) *QField {
 
 	return f
 }
-
+*/
 // NewQField - Returns a new Qfield with the provided name and type.
 func NewQField(name string, t QType) QField {
 	return QField{Name: name, Type: t}
