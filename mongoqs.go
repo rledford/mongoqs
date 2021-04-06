@@ -53,9 +53,9 @@ func toMOp(op string) string {
 	return "$" + op[0:len(op) - 1]
 }
 
+// toOpValueMap - Builds a map of operator keys to values
 func toOpValueMap(qvalue string, t QType) map[string][]string {
 	result := make(map[string][]string)
-
 	opindexes := opregex.FindAllStringIndex(qvalue, len(qvalue))
 	if len(opindexes) > 0 {
 		if opindexes[0][0] > 0 {
@@ -65,14 +65,17 @@ func toOpValueMap(qvalue string, t QType) map[string][]string {
 		for i, oi := range opindexes {
 			op := qvalue[oi[0]:oi[1]]
 			if i + 1 < len(opindexes) {
+				// get a slice of qvalue from the end of the operator to the beginning of the next operator - values split at ,
 				endindex := opindexes[i+1][0]
 				value := strings.Split(strings.TrimSuffix(qvalue[oi[1]:endindex], ","),",")
 				result[op] = append(result[op], value...)
 			} else {
+				// get a slice from the end of the current operator to the end of the qvalue - values split at ,
 				result[op] = append(result[op], strings.Split(strings.TrimSuffix(qvalue[oi[1]:], ","),",")...)
 			}
 		}
 	} else {
+		// no operators found, assuming eq: for entire qvalue
 		result[eq] = append(result[eq], strings.Split(strings.TrimSuffix(qvalue, ","),",")...)
 	}
 
