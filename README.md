@@ -25,7 +25,6 @@
   - [Limit](#limit)
   - [Skip](#skip)
 - [Examples](#examples)
-- [Shortcomings](#shortcomings)
 - [Backlog](#backlog)
 
 ## Features
