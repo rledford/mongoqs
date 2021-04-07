@@ -238,8 +238,8 @@ func (f *QField) ApplyFilter(qvalue string, out *QResult) {
 			case QString:
 				nfilters++
 				result["$regex"] = primitive.Regex{
-					Pattern: regexp.QuoteMeta(strings.Join(values, "")),
-					Options: "i",
+					Pattern: regexp.QuoteMeta(strings.Join(values, ",")),
+					Options: "ig",
 				}
 			}
 		case slike:
@@ -247,7 +247,7 @@ func (f *QField) ApplyFilter(qvalue string, out *QResult) {
 			case QString:
 				nfilters++
 				result["$regex"] = primitive.Regex{
-					Pattern: "^" + regexp.QuoteMeta(strings.Join(values, "")),
+					Pattern: "^" + regexp.QuoteMeta(strings.Join(values, ",")),
 					Options: "i",
 				}
 			}
@@ -256,7 +256,7 @@ func (f *QField) ApplyFilter(qvalue string, out *QResult) {
 			case QString:
 				nfilters++
 				result["$regex"] = primitive.Regex{
-					Pattern: regexp.QuoteMeta(strings.Join(values, "")) + "$",
+					Pattern: regexp.QuoteMeta(strings.Join(values, ",")) + "$",
 					Options: "i",
 				}
 			}
