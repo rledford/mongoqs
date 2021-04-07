@@ -127,11 +127,14 @@ func (f *QField) ApplyFilter(qvalue string, out *QResult) {
 	for op, values := range opValueMap {
 		switch op {
 		case eq, ne, gt, gte, lt, lte:
+			if f.Type == QString {
+				nfilters++
+				// rejoin split values to use literal qvalue in query
+				result[toMOp(op)] = strings.Join(values, ",")
+				continue
+			}
 			for _, v := range values {
 				switch f.Type {
-				case QString:
-					nfilters++
-					result[toMOp(op)] = v
 				case QInt:
 					i, err := strconv.ParseInt(v, 10, 64)
 					if err == nil {
