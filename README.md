@@ -1,30 +1,26 @@
-# mongoqs
+# MongoQS
 
-`mongoqs` is a URL query string processor that converts query strings to MongoDB queries.
+MongoQS is a URL query string processor that converts query strings to MongoDB query filters, projections, and sort criteria. It also supports query result document limits and skips.
 
 ## Table of Contents
 
 - [Features](#features)
 - [Install](#install)
 - [Usage](#usage)
-- [Query Fields](#query-fields)
-  - [Reserved Fields](#reserved-fields)
-- [URL Query Syntax](#url-query-syntax)
-  - [Operators](#operators)
-  - [Query String Examples](#Query-string-examples)
-    - [Equal](#equal)
-    - [Range](#range)
-    - [In](#in)
-    - [Not In](#not-in)
-    - [All](#all)
-    - [Nested](#nested)
-- [Query Result](#query-result)
-  - [Filter](#filter)
-  - [Projection](#projection)
-  - [Sort](#sorts)
-  - [Limit](#limit)
-  - [Skip](#skip)
-- [Examples](#examples)
+- [QField](#qfield)
+  - [Reserved Words](#reserved-words)
+  - [Comparison Operators](#comparison-operators)
+  - [Sort Operators](#sort-operators)
+  - [Projection Operators](#projection-operators)
+- [Query Strings](#query-strings)
+  - [Syntax](#syntax)
+  - [Equal To](#equal-to)
+  - [Not Equal To](#not-equal-to)
+  - [Greater Than, Less Than](#greater-than-less-than)
+  - [Greater Than Equal To, Less Than Equal To](#greater-than-equal-to-less-than-equal-to)
+  - [In, Not In, All](#in-not-in-all)
+  - [Like, Starts Like, Ends Like](#like-starts-like-ends-like)
+- [QResult](#qresult)
 - [Backlog](#backlog)
 
 ## Features
@@ -70,29 +66,29 @@ import (
   "github.com/rledford/mongoqs"
 )
 // create and configure query fields
-myStringField := mongoqs.NewQField("myString", mongoqs.QString)
-myIntField := mongoqs.NewQField("myInt", mongoqs.QInt)
+myStringField := NewQField("myString", QString)
+myIntField := NewQField("myInt", QInt)
 myIntField.IsSortable() // allow this field to be used in sorts
-myIntField.IsProjectable() // // allow this field to be used in projections
-myFloatField := mongoqs.NewQField("myFloat", mongoqs.QFloat)
+myIntField.IsProjectable() // allow this field to be used in projections
+myFloatField := NewQField("myFloat", QFloat)
 myFloatField.IsSortable().IsProjectable() // same as calls on myIntField but chained
-myBoolField := mongoqs.NewQField("myBool", mongoqs.QBool)
-myDateTimeField := mongoqs.NewQField("myDateTime", mongoqs.QDateTime)
-myObjectIDField := mongoqs.NewQField("myObjectID", mongoqs.QObjectID)
+myBoolField := NewQField("myBool", QBool)
+myDateTimeField := NewQField("myDateTime", QDateTime)
+myObjectIDField := NewQField("myObjectID", QObjectID)
 myObjectIDField.UseAlias("_id", "id") // will use _id and id to refer to myObjectID
 // create a new query processor
-qproc := mongoqs.NewQProcessor(myStringField, myIntField, myFloatField, myBoolField, myDateTimeField, myObjectIDField)
+qproc := NewQProcessor(myStringField, myIntField, myFloatField, myBoolField, myDateTimeField, myObjectIDField)
 
-// we'll use the net/url package's Values to construct query to process, but it would be more common to use on from an http request
+// we'll use the net/url package's Values to construct query to process, but it would be more common to use one from an http request
 qs := url.Values{}
 qs.Add("unknown", "nin:1,2,3,4") // a QField was not created for 'unknown' so it will be ignored
-qs.Add("myString", "in:a,b,c,d")
+qs.Add("myString", "like:Hello, world")
 qs.Add("myInt", "gt:1,lt:10")
 qs.Add("myFloat", "1.0") // 'eq:' operator is assumed
 qs.Add("myBool", "false") // 'eq:' operator is assumed
-qs.Add("myDateTimeField", "gte:2021-01-01T15:00:00Z")
-qs.Add("id", "6050e7f529a90b22dc47f19e") // using an alias of myObjectID ('eq:' operator is assumed)
-qs.Add("srt", "-myInt,+myString") // sort by myInt in descending order (myStringField.IsSortable() was not called so +myString is ignored)
+qs.Add("myDateTime", "gte:2021-01-01T15:00:00Z,lte:2021-02-01T15:00:00Z")
+qs.Add("id", "in:6050e7f529a90b22dc47f19e,6050e7f529a90b22dc47f19f") // using an alias of myObjectID
+qs.Add("srt", "-myInt,+myString") // sort by myInt in descending order (myStringField.IsSortable() was not called so +myString will be ignored)
 qs.Add("prj", "-myFloat") // exclude myFloat field from query results
 qs.Add("lmt", "10") // limit to 10 results
 qs.Add("skp", "100") // skip the first 100 results
@@ -107,7 +103,7 @@ if err == nil {
 
 ```bash
 --- Filter ---
-map[myBool:map[$eq:false] myFloat:map[$eq:1] myInt:map[$gt:1 $lt:10] myObjectID:map[$eq:ObjectID("6050e7f529a90b22dc47f19e")] myString:map[$in:[a b c d]]]
+map[myBool:map[$eq:false] myDateTime:map[$gte:1609513200000 $lte:1612191600000] myFloat:map[$eq:1] myInt:map[$gt:1 $lt:10] myObjectID:map[$in:[ObjectID("6050e7f529a90b22dc47f19e") ObjectID("6050e7f529a90b22dc47f19f")]] myString:map[$regex:{"pattern": "Hello, world", "options": "ig"}]]
 --------------
 --- Projection ---
 map[myFloat:0]
@@ -121,7 +117,7 @@ Skip:   100
 --------------
 ```
 
-## Query Fields
+## QField
 
 Query fields (QField) are used to build query processors (QProcessor). It is recommended to use the _NewQueryField_ method when creating a new QField.
 
@@ -134,27 +130,109 @@ Query fields (QField) are used to build query processors (QProcessor). It is rec
 | Projectable | Bool            | Whether the field is allowed in projections or not.                                                                                              |
 | Sortable    | Bool            | Whether the field is allowed to be used to sort or not.                                                                                          |
 
-### Reserved Fields
+### Reserved Words
 
-## Syntax
+When creating a QField for a processor to use, the following words can not be used as they would conflict with the built-in fields.
 
-### Operators
+| Word | Description                                                                                          |
+| ---- | ---------------------------------------------------------------------------------------------------- |
+| lmt  | Used to indicate a query result limit                                                                |
+| skp  | Used to indicate how many documents to skip in the query results                                     |
+| srt  | Used to indicate one or more fields to sort by                                                       |
+| prj  | Used to indicate which fields to include/exclude from the documents in the query result (projection) |
 
-### Query String Examples
+### Comparision Operators
 
-## Query Result
+| Operator | QType   | Description                                                       |
+| -------- | ------- | ----------------------------------------------------------------- |
+| eq:      | any     | Equal to - if no operator is detected the eq: operator is assumed |
+| ne:      | any     | Not equal to                                                      |
+| gt:      | any     | Greather than                                                     |
+| gte:     | any     | Greater than or equal to                                          |
+| lt:      | any     | Less than                                                         |
+| lte:     | any     | Less than or equal to                                             |
+| in:      | any     | Includes one or more values                                       |
+| nin:     | any     | Does not include one or more values                               |
+| all:     | any     | Contains all values                                               |
+| like:    | QString | Contains a value                                                  |
+| slike:   | QString | Starts with a value                                               |
+| elike:   | QString | Ends with a value                                                 |
 
-### Filter
+### Sort Operators
 
-### Projection
+| Operator | Description                                                            |
+| -------- | ---------------------------------------------------------------------- |
+| +        | Ascending order - if no operator is detected the + operator is assumed |
+| -        | Descending order                                                       |
 
-### Sort
+### Projection Operators
 
-### Limit
+_NOTE:_ MongoDB does not support mixed include/exclude projections. The first operator found is used for all projection fields.
 
-### Skip
+| Operator | Description                                                           |
+| -------- | --------------------------------------------------------------------- |
+| +        | Include field - if no opertator is detected the + operator is assumed |
+| -        | Exclude field                                                         |
 
-## Examples
+## Query Strings
+
+### Syntax
+
+`?<field>=<operator>:<value>,<value>`
+
+### Equal To
+
+`?int=1`
+
+`?int=eq:1`
+
+### Not Equal To
+
+`?int=ne:1`
+
+### Greater Than, Less Than
+
+`?int=gt:1`
+
+`?int=lt:1`
+
+### Greater Than Equal To, Less Than Equal To
+
+`?int=gte:1`
+
+`?int=lte:1`
+
+### In, Not In, All
+
+`?int=in:1,2,3`
+
+`?int=nin:1,2,3`
+
+`?int=all:1,2,3`
+
+### Like, Starts Like, Ends Like
+
+`?str=like:abc`
+
+`?str=slike:a`
+
+`?str=elike:bc`
+
+### Mixed
+
+`?int=gt:1,lte:5,str=elike:bc,srt=-field,lmt=10,skp=100,prj=field`
+
+Find documents where `field` is greater than 1 and less than or equal to 5; sort by `field` in descending order; limit the number of returned documents to 10; skip the first 100 documents; only include `field` in the returned documents.
+
+## QResult
+
+| Property   | Type   | Default | Description                                          |
+| ---------- | ------ | ------- | ---------------------------------------------------- |
+| Filter     | bson.M | {}      | MongoDB query filter                                 |
+| Projection | bson.M | {}      | MongoDB field projection                             |
+| Sort       | bson.M | {}      | MongoDB sort criteria                                |
+| Limit      | int    | 0       | The number of documents to limit the query result to |
+| Skip       | int    | 0       | The number of documents to skip in the query result  |
 
 ## Backlog
 
