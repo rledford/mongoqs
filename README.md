@@ -20,6 +20,7 @@ MongoQS is a URL query string processor that converts query strings to MongoDB q
   - [Greater Than Equal To, Less Than Equal To](#greater-than-equal-to-less-than-equal-to)
   - [In, Not In, All](#in-not-in-all)
   - [Like, Starts Like, Ends Like](#like-starts-like-ends-like)
+  - [Mixed](#mixed)
 - [QResult](#qresult)
 - [Backlog](#backlog)
 
@@ -220,9 +221,9 @@ _NOTE:_ MongoDB does not support mixed include/exclude projections. The first op
 
 ### Mixed
 
-`?int=gt:1,lte:5,str=elike:bc,srt=-field,lmt=10,skp=100,prj=field`
+`?int=gt:1,lte:5,str=like:abc,srt=-int,lmt=10,skp=100,prj=str`
 
-Find documents where `field` is greater than 1 and less than or equal to 5; sort by `field` in descending order; limit the number of returned documents to 10; skip the first 100 documents; only include `field` in the returned documents.
+Find documents where `int` is greater than `1` and less than or equal to `5`; sort by `int` in descending order; limit the number of returned documents to `10`; skip the first `100` documents; only include `str` in the returned documents.
 
 ## QResult
 
