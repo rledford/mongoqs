@@ -8,7 +8,7 @@ MongoQS is a URL query string processor that converts query strings to MongoDB q
 - [Install](#install)
 - [Usage](#usage)
 - [QField](#qfield)
-  - [Reserved Words](#reserved-words)
+  - [Reserved Keys](#reserved-keys)
   - [Comparison Operators](#comparison-operators)
   - [Sort Operators](#sort-operators)
   - [Projection Operators](#projection-operators)
@@ -131,9 +131,9 @@ Query fields (QField) are used to build query processors (QProcessor). It is rec
 | Projectable | Bool            | Whether the field is allowed in projections or not.                                                                                              |
 | Sortable    | Bool            | Whether the field is allowed to be used to sort or not.                                                                                          |
 
-### Reserved Words
+### Reserved Keys
 
-When creating a QField for a processor to use, the following words can not be used as they would conflict with the built-in fields.
+When creating a QField for a processor to use, the following keys can not be used for the field name as they would conflict with the following built-in keys.
 
 | Word | Description                                                                                         |
 | ---- | --------------------------------------------------------------------------------------------------- |
