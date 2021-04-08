@@ -108,16 +108,17 @@ const QDateTime QType = 4
 // QObjectID - Allows query values to be processed as MongoDB ObjectIDs. Does not apply to QResult if the value is not a valid ObjectID.
 const QObjectID QType = 5
 
-// QField - Query field definition. Name and Aliases cannot be empty or use any of the following reserved values: 'qlmt', 'qskp', 'qsrt', 'qprj'. If provided, the Default method should return a valid MongoDB filter parameter.
+// QField - Query field definition. Key and Aliases cannot be empty or use any of the following reserved values: 'qlmt', 'qskp', 'qsrt', 'qprj'. If provided, the Default method should return a valid MongoDB filter parameter.
 type QField struct {
 	Type QType // The data type expected when parsing the values of query parameter values
-	Name string // The target parameter in the request query string - supports dot notation for nested fields
-	Default *func() bson.M // Pointer to a function to run if this field is missing/is invalid
-	Validators []*func() error // Pointer to function to run to validate the field
-	Aliases []string // List of aliases that can be used as alternatives to this QField.Name
-	Projectable bool // If true, this QField may be used for projections
-	Sortable bool // If true, this QField can be used for sorting
+	Key string // The target parameter in the request query string - supports dot notation for nested fields
+	Default func() bson.M // Function to run if this field is missing/is invalid
+	Validators []func() error // Functions to run to validate the field after it has been parsed
+	Aliases []string // List of aliases that can be used as alternatives to this QField.Key
 	TimeLayouts []string // Date parsing formats
+	IsProjectable bool // If true, this QField may be used for projections
+	IsSortable bool // If true, this QField can be used for sorting
+	HasDefaultFunc bool // If true, the Default function will be used if a the field is missing/is invalid
 }
 // ApplyFilter - Processes the qvalue as the specified Type and applies the result to the provided out QResult.
 func (f *QField) ApplyFilter(qvalue string, out *QResult) {
@@ -264,26 +265,32 @@ func (f *QField) ApplyFilter(qvalue string, out *QResult) {
 	}
 	
 	if nfilters > 0 {
-		out.Filter[f.Name] = result
+		out.Filter[f.Key] = result
 	}
 }
-// UseDefault - Sets the Default method to the provided func pointer. Returns caller for chaining.
-func (f *QField) UseDefault(fn *func() bson.M) *QField{
+// DefualtFunc - Sets the Default method to the provided function. Returns caller for chaining.
+func (f *QField) DefaultFunc(fn func() bson.M) *QField{
 	f.Default = fn
+	f.HasDefaultFunc = true
 	return f
 }
-// IsProjectable - Allows field to be used in projections. Returns caller for chaining.
-func (f *QField) IsProjectable() *QField{
-	f.Projectable = true
+// ValidatorFuncs - Adds one or more validator functions to this field's Validators slice. Returns caller for chaining.
+func (f *QField) ValidatorFuncs(fn ...func() error) *QField {
+	f.Validators = append(f.Validators, fn...)
 	return f
 }
-// IsSortable - Allows field to be used in sorts. Returns caller for chaining.
-func (f *QField) IsSortable() *QField {
-	f.Sortable = true
+// Projectable - Allows field to be used in projections. Returns caller for chaining.
+func (f *QField) Projectable() *QField{
+	f.IsProjectable = true
 	return f
 }
-// UseAlias - Adds one or more aliases for this field. Returns caller for chaining.
-func (f *QField) UseAlias(alias ...string) *QField {
+// Sortable - Allows field to be used in sorts. Returns caller for chaining.
+func (f *QField) Sortable() *QField {
+	f.IsSortable = true
+	return f
+}
+// UseAlias - Adds one or more aliases to this field. Returns caller for chaining.
+func (f *QField) UseAliases(alias ...string) *QField {
 	f.Aliases = append(f.Aliases, alias...)
 	return f
 }
@@ -291,16 +298,16 @@ func (f *QField) UseAlias(alias ...string) *QField {
 // UseTimeLayout - Adds one or more datetime layouts to be used when the QField type is QDateTime. Returns caller for chaining.
 func (f *QField) UseTimeLayout(dtfmt ...string) *QField {
 	if f.Type != QDateTime {
-		log.Fatal(fmt.Sprintf("Field %q must be type QDateTime to add datetime layouts", f.Name))
+		log.Fatal(fmt.Sprintf("Field %q must be type QDateTime to add datetime layouts", f.Key))
 	}
 	f.TimeLayouts = append(f.TimeLayouts, dtfmt...)
 
 	return f
 }
 */
-// NewQField - Returns a new Qfield with the provided name and type.
-func NewQField(name string, t QType) QField {
-	return QField{Name: name, Type: t}
+// NewQField - Returns a new Qfield with the provided key and type.
+func NewQField(key string, t QType) QField {
+	return QField{Key: key, Type: t}
 }
 
 // NewQResult - Returns a new empty QResult. Should be passed as the *out parameter when calling the processor function returned from NewRequestQueryProcessor.
@@ -315,20 +322,20 @@ func NewQResult() QResult {
 
 // NewQProcessor - Validates the provided QFields and returns a function that converts a URL query to a QResult.
 func NewQProcessor(fields ...QField) func (u url.Values) (QResult, error) {
-	// validate fields to ensures each field's Name and Aliases are not empty or using reserved values
+	// validate fields to ensures each field's Key and Aliases are not empty or using reserved values
 	for _, f := range fields {
-		switch f.Name {
+		switch f.Key {
 		case "":
-			log.Fatal(fmt.Sprintf("Field %q cannot be an empty string\n", f.Name))
+			log.Fatal(fmt.Sprintf("Field %q cannot be an empty string\n", f.Key))
 		case lmt, skp, srt, prj:
-			log.Fatal(fmt.Sprintf("Field %q is using a reserved name (e.g. %q, %q, %q, %q)\n", f.Name, lmt, skp, srt, prj))
+			log.Fatal(fmt.Sprintf("Field %q is using a reserved key (e.g. %q, %q, %q, %q)\n", f.Key, lmt, skp, srt, prj))
 		}
 		for _, a := range f.Aliases {
 			switch a {
 			case "":
-				log.Fatal(fmt.Sprintf("Field %q alias cannot be an empty string\n", f.Name))
+				log.Fatal(fmt.Sprintf("Field %q alias cannot be an empty string\n", f.Key))
 			case lmt, skp, srt, prj:
-				log.Fatal(fmt.Sprintf("Field %q alias %q is using a reserved name (e.g. %q, %q, %q, %q)\n", f.Name, a, lmt, skp, srt, prj))
+				log.Fatal(fmt.Sprintf("Field %q alias %q is using a reserved key (e.g. %q, %q, %q, %q)\n", f.Key, a, lmt, skp, srt, prj))
 			}
 		}
 	}
@@ -381,9 +388,9 @@ func NewQProcessor(fields ...QField) func (u url.Values) (QResult, error) {
 
 		// process fields
 		for _, field := range fields {
-			qvalue := query.Get(field.Name)
+			qvalue := query.Get(field.Key)
 			// alias := ""
-			// search for applicable alias if field is not found by name
+			// search for applicable alias if field is not found by key
 			if qvalue == "" {
 				for _, a := range field.Aliases {
 					qvalue = query.Get(a)
@@ -396,31 +403,31 @@ func NewQProcessor(fields ...QField) func (u url.Values) (QResult, error) {
 			}
 			if qvalue == "" {
 				// apply default if Default function was provided
-				if field.Default != nil {
-					result.Filter[field.Name] = (*field.Default)()
+				if field.HasDefaultFunc {
+					result.Filter[field.Key] = field.Default()
 				}
 				continue
 			}
 			// apply projections
-			if field.Projectable {
-				if _, ok := projections[field.Name]; ok {
-					result.Projection[field.Name] = projsum
+			if field.IsProjectable {
+				if _, ok := projections[field.Key]; ok {
+					result.Projection[field.Key] = projsum
 				} else {
 					for _, alias := range field.Aliases {
 						if _, ok := projections[alias]; ok {
-							result.Projection[field.Name] = projsum
+							result.Projection[field.Key] = projsum
 						}
 					}
 				}
 			}
 			// apply sorts
-			if field.Sortable {
-				if ord, ok := sorts[field.Name]; ok {
-					result.Sort[field.Name] = ord
+			if field.IsSortable {
+				if ord, ok := sorts[field.Key]; ok {
+					result.Sort[field.Key] = ord
 				} else {
 					for _, alias := range field.Aliases {
 						if ord, ok := sorts[alias]; ok {
-							result.Sort[field.Name] = ord
+							result.Sort[field.Key] = ord
 						}
 					}
 				}
