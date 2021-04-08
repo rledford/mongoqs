@@ -12,6 +12,7 @@ MongoQS is a URL query string processor that converts query strings to MongoDB q
   - [Comparison Operators](#comparison-operators)
   - [Sort Operators](#sort-operators)
   - [Projection Operators](#projection-operators)
+  - [Methods](#qfield-methods)
 - [Query Strings](#query-strings)
   - [Syntax](#syntax)
   - [Equal To](#equal-to)
@@ -124,23 +125,23 @@ Query fields (QField) are used to build query processors (QProcessor). It is rec
 
 | Property    | Type            | Description                                                                                                                                      |
 | ----------- | --------------- | ------------------------------------------------------------------------------------------------------------------------------------------------ |
-| Name        | string          | The name of the field. This should match the target field in the database schema.                                                                |
+| Key         | string          | The key of the field in as it will appear in the query string. This should match the target field in the database schema.                        |
 | Type        | QType           | The type used when parsing query strings for this field                                                                                          |
 | Default     | \*func() bson.M | An optional pointer to a default function that will be used to set the filter for this field if the field is missing or if the value is invalid. |
-| Aliases     | []string        | A slice of strings that can be used as aliases for the field's name.                                                                             |
+| Aliases     | []string        | A slice of strings that can be used as aliases for the field's key.                                                                              |
 | Projectable | Bool            | Whether the field is allowed in projections or not.                                                                                              |
 | Sortable    | Bool            | Whether the field is allowed to be used to sort or not.                                                                                          |
 
 ### Reserved Keys
 
-When creating a QField for a processor to use, some values can not be used for the field name as they would conflict with the following built-in keys.
+When creating a QField, some values can not be used for the field key as they would conflict with the following built-in keys.
 
-| Word | Description                                                                                         |
-| ---- | --------------------------------------------------------------------------------------------------- |
-| lmt  | Used to specify a query result limit                                                                |
-| skp  | Used to specify how many documents to skip in the query results                                     |
-| srt  | Used to specify one or more fields to sort by                                                       |
-| prj  | Used to specify which fields to include/exclude from the documents in the query result (projection) |
+| Key | Description                                                                                         |
+| --- | --------------------------------------------------------------------------------------------------- |
+| lmt | Used to specify a query result limit                                                                |
+| skp | Used to specify how many documents to skip in the query results                                     |
+| srt | Used to specify one or more fields to sort by                                                       |
+| prj | Used to specify which fields to include/exclude from the documents in the query result (projection) |
 
 ### Comparision Operators
 
@@ -174,6 +175,18 @@ _NOTE:_ MongoDB does not support mixed include/exclude projections. The first op
 | -------- | --------------------------------------------------------------------- |
 | +        | Include field - if no opertator is detected the + operator is assumed |
 | -        | Exclude field                                                         |
+
+<h3 id="qfield-methods">Methods</h3>
+
+All QField methods return \*QField so that the methods are chainable.
+
+| Method         | Args            | Return Type | Description                                                                                                                                                        |
+| -------------- | --------------- | ----------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| DefaultFunc    | func() bson.M   | \*QField    | Sets the QField's Default function to the to run when the field is missing/is invalid in the query string. This also sets the _UseDefaultFunc_ property to `true`. |
+| ValidatorFuncs | ...func() error | \*QField    | Adds one or more validator functions to the QField's Validators property. Validators are run _after_ the query string is successfully parsed.                      |
+| UseAlias       | ...string       | \*QField    | Adds one or more aliases to the QField allowing it query strings to refer to the field without using its name                                                      |
+| IsProjectable  |                 | \*QField    | Allows the QField to be used in projections.                                                                                                                       |
+| IsSortable     |                 | \*QField    | Allows the QField to be used to sort.                                                                                                                              |
 
 ## Query Strings
 
