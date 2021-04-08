@@ -149,15 +149,15 @@ When creating a QField for a processor to use, some values can not be used for t
 | eq:      | any     | Equal to - if no operator is detected the eq: operator is assumed |
 | ne:      | any     | Not equal to                                                      |
 | gt:      | any     | Greather than                                                     |
-| gte:     | any     | Greater than or equal to                                          |
 | lt:      | any     | Less than                                                         |
+| gte:     | any     | Greater than or equal to                                          |
 | lte:     | any     | Less than or equal to                                             |
 | in:      | any     | Includes one or more values                                       |
 | nin:     | any     | Does not include one or more values                               |
 | all:     | any     | Contains all values                                               |
-| like:    | QString | Contains a value                                                  |
-| slike:   | QString | Starts with a value                                               |
-| elike:   | QString | Ends with a value                                                 |
+| like:    | QString | Contains a character sequence                                     |
+| slike:   | QString | Starts with a character sequence                                  |
+| elike:   | QString | Ends with a character sequence                                    |
 
 ### Sort Operators
 
