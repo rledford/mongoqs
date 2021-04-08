@@ -135,12 +135,12 @@ Query fields (QField) are used to build query processors (QProcessor). It is rec
 
 When creating a QField for a processor to use, the following words can not be used as they would conflict with the built-in fields.
 
-| Word | Description                                                                                          |
-| ---- | ---------------------------------------------------------------------------------------------------- |
-| lmt  | Used to indicate a query result limit                                                                |
-| skp  | Used to indicate how many documents to skip in the query results                                     |
-| srt  | Used to indicate one or more fields to sort by                                                       |
-| prj  | Used to indicate which fields to include/exclude from the documents in the query result (projection) |
+| Word | Description                                                                                         |
+| ---- | --------------------------------------------------------------------------------------------------- |
+| lmt  | Used to specify a query result limit                                                                |
+| skp  | Used to specify how many documents to skip in the query results                                     |
+| srt  | Used to specify one or more fields to sort by                                                       |
+| prj  | Used to specify which fields to include/exclude from the documents in the query result (projection) |
 
 ### Comparision Operators
 
