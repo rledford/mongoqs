@@ -10,14 +10,14 @@ func TestNewQProcessor(t *testing.T) {
 	// create and configure query fields
 	myStringField := NewQField("myString", QString)
 	myIntField := NewQField("myInt", QInt)
-	myIntField.IsSortable() // allow this field to be used in sorts
-	myIntField.IsProjectable() // allow this field to be used in projections
+	myIntField.Sortable() // allow this field to be used in sorts
+	myIntField.Projectable() // allow this field to be used in projections
 	myFloatField := NewQField("myFloat", QFloat)
-	myFloatField.IsSortable().IsProjectable() // same as calls on myIntField but chained
+	myFloatField.Sortable().Projectable() // same as calls on myIntField but chained
 	myBoolField := NewQField("myBool", QBool)
 	myDateTimeField := NewQField("myDateTime", QDateTime)
 	myObjectIDField := NewQField("myObjectID", QObjectID)
-	myObjectIDField.UseAlias("_id", "id") // will use _id and id to refer to myObjectID
+	myObjectIDField.UseAliases("_id", "id") // will use _id and id to refer to myObjectID
 	// create a new query processor
 	qproc := NewQProcessor(myStringField, myIntField, myFloatField, myBoolField, myDateTimeField, myObjectIDField)
 
@@ -30,7 +30,7 @@ func TestNewQProcessor(t *testing.T) {
 	qs.Add("myBool", "false") // 'eq:' operator is assumed
 	qs.Add("myDateTime", "gte:2021-01-01T15:00:00Z,lte:2021-02-01T15:00:00Z")
 	qs.Add("id", "in:6050e7f529a90b22dc47f19e,6050e7f529a90b22dc47f19f") // using an alias of myObjectID
-	qs.Add("srt", "-myInt,+myString") // sort by myInt in descending order (myStringField.IsSortable() was not called so +myString will be ignored)
+	qs.Add("srt", "-myInt,+myString") // sort by myInt in descending order (myStringField.Sortable() was not called so +myString will be ignored)
 	qs.Add("prj", "-myFloat") // exclude myFloat field from query results
 	qs.Add("lmt", "10") // limit to 10 results
 	qs.Add("skp", "100") // skip the first 100 results
