@@ -133,7 +133,7 @@ Query fields (QField) are used to build query processors (QProcessor). It is rec
 
 ### Reserved Keys
 
-When creating a QField for a processor to use, the following keys can not be used for the field name as they would conflict with the following built-in keys.
+When creating a QField for a processor to use, some values can not be used for the field name as they would conflict with the following built-in keys.
 
 | Word | Description                                                                                         |
 | ---- | --------------------------------------------------------------------------------------------------- |
