@@ -238,28 +238,22 @@ func (f *QField) ApplyFilter(qvalue string, out *QResult) {
 			switch f.Type {
 			case QString:
 				nfilters++
-				result["$regex"] = primitive.Regex{
-					Pattern: regexp.QuoteMeta(strings.Join(values, ",")),
-					Options: "ig",
-				}
+				result["$regex"] = regexp.QuoteMeta(strings.Join(values, ","))
+				result["$options"] = "i"
 			}
 		case slike:
 			switch f.Type {
 			case QString:
 				nfilters++
-				result["$regex"] = primitive.Regex{
-					Pattern: "^" + regexp.QuoteMeta(strings.Join(values, ",")),
-					Options: "i",
-				}
+				result["$regex"] = "^" + regexp.QuoteMeta(strings.Join(values, ","))
+				result["$options"] = "i"
 			}
 		case elike:
 			switch f.Type {
 			case QString:
 				nfilters++
-				result["$regex"] = primitive.Regex{
-					Pattern: regexp.QuoteMeta(strings.Join(values, ",")) + "$",
-					Options: "i",
-				}
+				result["$regex"] = regexp.QuoteMeta(strings.Join(values, ",")) + "$"
+				result["$options"] = "i"
 			}
 		}
 	}
