@@ -1,6 +1,6 @@
 # MongoQS
 
-MongoQS is a URL query string processor that converts query strings to MongoDB query filters, projections, and sort criteria. It also supports query result document limits and skips.
+MongoQS is a URL query string processor that converts query strings to MongoDB query filters and options.
 
 ## Table of Contents
 
@@ -49,7 +49,7 @@ To install _mongoqs_, first make sure Go **version 1.16+** is installed and your
 1. Add _mongoqs_ to your Go project dependencies
 
 ```bash
-$ go get -u github.com/rledford/mongoqs
+$ go get -u github.com/rledford/mongoqs@latest
 ```
 
 2. Import _mongoqs_ into your code
@@ -65,21 +65,21 @@ import (
   "fmt" // for usage exmaple only
   "net/url" // for usage example only
 
-  "github.com/rledford/mongoqs"
+  mqs "github.com/rledford/mongoqs"
 )
 // create and configure query fields
-myStringField := NewQField("myString", QString)
-myIntField := NewQField("myInt", QInt)
+myStringField := mqs.NewQField("myString", mqs.QString)
+myIntField := mqs.NewQField("myInt", mqs.QInt)
 myIntField.IsSortable() // allow this field to be used in sorts
 myIntField.IsProjectable() // allow this field to be used in projections
-myFloatField := NewQField("myFloat", QFloat)
+myFloatField := mqs.NewQField("myFloat", mqs.QFloat)
 myFloatField.IsSortable().IsProjectable() // same as calls on myIntField but chained
-myBoolField := NewQField("myBool", QBool)
-myDateTimeField := NewQField("myDateTime", QDateTime)
-myObjectIDField := NewQField("myObjectID", QObjectID)
+myBoolField := mqs.NewQField("myBool", mqs.QBool)
+myDateTimeField := mqs.NewQField("myDateTime", mqs.QDateTime)
+myObjectIDField := mqs.NewQField("myObjectID", mqs.QObjectID)
 myObjectIDField.UseAlias("_id", "id") // will use _id and id to refer to myObjectID
 // create a new query processor
-qproc := NewQProcessor(myStringField, myIntField, myFloatField, myBoolField, myDateTimeField, myObjectIDField)
+qproc := mqs.NewQProcessor(myStringField, myIntField, myFloatField, myBoolField, myDateTimeField, myObjectIDField)
 
 // we'll use the net/url package's Values to construct query to process, but it would be more common to use one from an http request
 qs := url.Values{}
@@ -103,20 +103,40 @@ if err == nil {
 
 ### Output
 
-```bash
---- Filter ---
-map[myBool:map[$eq:false] myDateTime:map[$gte:1609513200000 $lte:1612191600000] myFloat:map[$eq:1] myInt:map[$gt:1 $lt:10] myObjectID:map[$in:[ObjectID("6050e7f529a90b22dc47f19e") ObjectID("6050e7f529a90b22dc47f19f")]] myString:map[$regex:{"pattern": "Hello, world", "options": "ig"}]]
---------------
---- Projection ---
-map[myFloat:0]
-------------------
---- Sort ---
-map[myInt:-1]
--------------
---- Paging ---
-Limit:  10
-Skip:   100
---------------
+```json
+{
+  "Filter": {
+    "myBool": {
+      "$eq": false
+    },
+    "myDateTime": {
+      "$gte": "2021-01-01T15:00:00Z",
+      "$lte": "2021-02-01T15:00:00Z"
+    },
+    "myFloat": {
+      "$eq": 1
+    },
+    "myInt": {
+      "$gt": 1,
+      "$lt": 10
+    },
+    "myObjectID": {
+      "$in": ["6050e7f529a90b22dc47f19e", "6050e7f529a90b22dc47f19f"]
+    },
+    "myString": {
+      "$regex": "Hello, world",
+      "$options": "i"
+    }
+  },
+  "Projection": {
+    "myFloat": 0
+  },
+  "Sort": {
+    "myInt": -1
+  },
+  "Limit": 10,
+  "Skip": 100
+}
 ```
 
 ## QField
