@@ -89,9 +89,27 @@ type QResult struct {
 	Limit int64 // MongoDB document limit
 	Skip int64 // MongoDB ocument skip count
 	Sort bson.M // MongoDB sort
+	Meta map[string]string // Map of keys to raw qstring value
 }
 func (r *QResult) String() string {
-	return fmt.Sprintf("--- Filter ---\n%v\n--------------\n--- Projection ---\n%v\n------------------\n--- Sort ---\n%v\n-------------\n--- Paging ---\nLimit:\t%d\nSkip:\t%d\n--------------", r.Filter, r.Projection, r.Sort, r.Limit, r.Skip)
+	return fmt.Sprintf(`
+	----- Filter -----
+	%v
+	------------------
+	--- Projection ---
+	%v
+	------------------
+	------ Sort ------
+	%v
+	------------------
+	----- Paging -----
+	Limit:\t%d
+	Skip:\t%d
+	------------------
+	------ Meta ------
+	%v
+	------------------
+	` , r.Filter, r.Projection, r.Sort, r.Limit, r.Skip, r.Meta)
 }
 
 type QType int
@@ -118,6 +136,7 @@ type QField struct {
 	TimeLayouts []string // Date parsing formats
 	IsProjectable bool // If true, this QField may be used for projections
 	IsSortable bool // If true, this QField can be used for sorting
+	IsMeta bool // If true, this QFieeld will be used as a meta field
 	HasDefaultFunc bool // If true, the Default function will be used if a the field is missing/is invalid
 }
 // ApplyFilter - Processes the qvalue as the specified Type and applies the result to the provided out QResult.
@@ -262,15 +281,20 @@ func (f *QField) ApplyFilter(qvalue string, out *QResult) {
 		out.Filter[f.Key] = result
 	}
 }
-// DefualtFunc - Sets the Default method to the provided function. Returns caller for chaining.
-func (f *QField) DefaultFunc(fn func() bson.M) *QField{
+// UseDefault - Sets the Default method to the provided function. Returns caller for chaining.
+func (f *QField) UseDefault(fn func() bson.M) *QField{
 	f.Default = fn
 	f.HasDefaultFunc = true
 	return f
 }
-// ValidatorFuncs - Adds one or more validator functions to this field's Validators slice. Returns caller for chaining.
-func (f *QField) ValidatorFuncs(fn ...func() error) *QField {
+// UseValidators - Adds one or more validator functions to this field's Validators slice. Returns caller for chaining.
+func (f *QField) UseValidators(fn ...func() error) *QField {
 	f.Validators = append(f.Validators, fn...)
+	return f
+}
+// UseAlias - Adds one or more aliases to this field. Returns caller for chaining.
+func (f *QField) UseAliases(alias ...string) *QField {
+	f.Aliases = append(f.Aliases, alias...)
 	return f
 }
 // Projectable - Allows field to be used in projections. Returns caller for chaining.
@@ -283,9 +307,40 @@ func (f *QField) Sortable() *QField {
 	f.IsSortable = true
 	return f
 }
-// UseAlias - Adds one or more aliases to this field. Returns caller for chaining.
-func (f *QField) UseAliases(alias ...string) *QField {
-	f.Aliases = append(f.Aliases, alias...)
+
+// ParseAsMeta - Indicates that this field will not appear in the QResult Filter and will be parsed/interpreted outside of MongoQS
+func (f *QField) ParseAsMeta() *QField {
+	f.IsMeta = true
+	return f
+}
+// ParseAsString - Indicates that this field represents a database document field that contains a string value
+func (f *QField) ParseAsString() *QField {
+	f.Type = QString
+	return f
+}
+// ParseAsInt - Indicates that this field represents a database document field that contains an integer value
+func (f *QField) ParseAsInt() *QField {
+	f.Type = QInt
+	return f
+}
+// ParseAsFloat - Indicates that this field represents a database document field that contains a floating point number value
+func (f *QField) ParseAsFloat() *QField {
+	f.Type = QFloat
+	return f
+}
+// ParseAsBool - Indicates that this field represents a database document field that contains a boolean value
+func (f *QField) ParseAsBool() *QField {
+	f.Type = QBool
+	return f
+}
+// ParseAsDateTime - Indicates that this field represents a database document field that contains a datetime value
+func (f *QField) ParseAsDateTime() *QField {
+	f.Type = QDateTime
+	return f
+}
+// ParseAsObjectID - Indicates that this field represents a database document field that contains a string value
+func (f *QField) ParseAsObjectID() *QField {
+	f.Type = QObjectID
 	return f
 }
 /*
@@ -300,8 +355,8 @@ func (f *QField) UseTimeLayout(dtfmt ...string) *QField {
 }
 */
 // NewQField - Returns a new Qfield with the provided key and type.
-func NewQField(key string, t QType) QField {
-	return QField{Key: key, Type: t}
+func NewQField(key string) QField {
+	return QField{Key: key}
 }
 
 // NewQResult - Returns a new empty QResult. Should be passed as the *out parameter when calling the processor function returned from NewRequestQueryProcessor.
@@ -310,6 +365,7 @@ func NewQResult() QResult {
 	result.Filter = bson.M{}
 	result.Projection = bson.M{}
 	result.Sort = bson.M{}
+	result.Meta = make(map[string]string)
 
 	return result
 }
@@ -383,17 +439,21 @@ func NewQProcessor(fields ...QField) func (u url.Values) (QResult, error) {
 		// process fields
 		for _, field := range fields {
 			qvalue := query.Get(field.Key)
-			// alias := ""
 			// search for applicable alias if field is not found by key
 			if qvalue == "" {
 				for _, a := range field.Aliases {
 					qvalue = query.Get(a)
 					if qvalue != "" {
 						// alias found - break loop
-						// alias = a
 						break
 					}
 				}
+			}
+			if field.IsMeta {
+				if qvalue != "" {
+					result.Meta[field.Key] = qvalue
+				}
+				continue
 			}
 			if qvalue == "" {
 				// apply default if Default function was provided
