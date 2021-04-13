@@ -5,4 +5,4 @@
 package mongoqs
 
 // Version is the current mongoqs version.
-const Version = "v0.4.0"
+const Version = "v0.5.0"
