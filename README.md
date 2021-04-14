@@ -68,18 +68,26 @@ import (
   mqs "github.com/rledford/mongoqs"
 )
 // create and configure query fields
-myStringField := mqs.NewQField("myString", mqs.QString)
-myIntField := mqs.NewQField("myInt", mqs.QInt)
-myIntField.IsSortable() // allow this field to be used in sorts
-myIntField.IsProjectable() // allow this field to be used in projections
-myFloatField := mqs.NewQField("myFloat", mqs.QFloat)
-myFloatField.IsSortable().IsProjectable() // same as calls on myIntField but chained
-myBoolField := mqs.NewQField("myBool", mqs.QBool)
-myDateTimeField := mqs.NewQField("myDateTime", mqs.QDateTime)
-myObjectIDField := mqs.NewQField("myObjectID", mqs.QObjectID)
-myObjectIDField.UseAlias("_id", "id") // will use _id and id to refer to myObjectID
+myStringField := NewQField("myString") // QType String is default so no call to ParseAsString is necessary
+myStringFieldWithDefault := NewQField("testDefault")
+myStringFieldWithDefault.UseDefault(func() string { return "slike:Something useful" })
+myIntField := NewQField("myInt")
+myIntField.ParseAsInt() // parse query string values integers
+myIntField.Sortable() // allow this field to be used in sorts
+myIntField.Projectable() // allow this field to be used in projections
+myFloatField := NewQField("myFloat")
+myFloatField.ParseAsFloat().Sortable().Projectable() // same as calls on myIntField but chained
+myBoolField := NewQField("myBool")
+myBoolField.ParseAsBool()
+myDateTimeField := NewQField("myDateTime")
+myDateTimeField.ParseAsDateTime()
+myObjectIDField := NewQField("myObjectID")
+myObjectIDField.UseAliases("_id", "id") // will use _id and id to refer to myObjectID
+myObjectIDField.ParseAsObjectID()
+myMetaField := NewQField("pageMarker")
+myMetaField.ParseAsMeta()
 // create a new query processor
-qproc := mqs.NewQProcessor(myStringField, myIntField, myFloatField, myBoolField, myDateTimeField, myObjectIDField)
+qproc := NewQProcessor(myStringField, myStringFieldWithDefault, myIntField, myFloatField, myBoolField, myDateTimeField, myObjectIDField, myMetaField)
 
 // we'll use the net/url package's Values to construct query to process, but it would be more common to use one from an http request
 qs := url.Values{}
@@ -90,7 +98,8 @@ qs.Add("myFloat", "1.0") // 'eq:' operator is assumed
 qs.Add("myBool", "false") // 'eq:' operator is assumed
 qs.Add("myDateTime", "gte:2021-01-01T15:00:00Z,lte:2021-02-01T15:00:00Z")
 qs.Add("id", "in:6050e7f529a90b22dc47f19e,6050e7f529a90b22dc47f19f") // using an alias of myObjectID
-qs.Add("srt", "-myInt,+myString") // sort by myInt in descending order (myStringField.IsSortable() was not called so +myString will be ignored)
+qs.Add("pageMarker", "6050e7f529a90b22dc47f19f")
+qs.Add("srt", "-myInt,+myString") // sort by myInt in descending order (myStringField.Sortable() was not called so +myString will be ignored)
 qs.Add("prj", "-myFloat") // exclude myFloat field from query results
 qs.Add("lmt", "10") // limit to 10 results
 qs.Add("skp", "100") // skip the first 100 results
@@ -98,7 +107,7 @@ qs.Add("skp", "100") // skip the first 100 results
 result, err := qproc(qs)
 if err == nil {
   fmt.Println(result.String())
-}
+	}
 ```
 
 ### Output
@@ -126,6 +135,10 @@ if err == nil {
     "myString": {
       "$regex": "Hello, world",
       "$options": "i"
+    },
+    "testDefault": {
+      "$regex": "^Something useful",
+      "options": "i"
     }
   },
   "Projection": {
@@ -135,7 +148,10 @@ if err == nil {
     "myInt": -1
   },
   "Limit": 10,
-  "Skip": 100
+  "Skip": 100,
+  "Meta": {
+    "pageMarker": "6050e7f529a90b22dc47f19f"
+  }
 }
 ```
 
@@ -156,6 +172,8 @@ Query fields (QField) are used to build query processors (QProcessor). It is rec
 ### Meta Fields
 
 Meta fields allow query parameters to be accepted by the processor but not added to the QResult Filter. The Meta values will appear in the QResult Meta property which is of type `map[string]string`. It is the developer's responsibility to parse and validate the Meta values in the QResult. Meta fields can be configured with aliases and a Default method.
+
+Meta fields may be useful for allowing clients to specify options, like allowing the request to specify a `pageMarker` (or similar) which would likely be the ObjectID of the last document in a previous query that the request handler could then use to modify the QResult Filter to include an additional parameter that queries the collection appropriately.
 
 ### Reserved Keys
 
