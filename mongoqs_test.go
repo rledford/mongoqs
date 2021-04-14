@@ -9,14 +9,14 @@ import (
 func TestNewQProcessor(t *testing.T) {
 	// create and configure query fields
 	myStringField := NewQField("myString") // QType String is default so no call to ParseAsString is necessary
-	myStringFieldWithDefault := NewQField("testDefault")
-	myStringFieldWithDefault.UseDefault(func() string { return "slike:Something useful" })
+	myStringFieldWithDefault := NewQField("myStringWithDefault")
+	myStringFieldWithDefault.UseDefault(func() string { return "slike:Something useful" }) // provide function that returns a string that uses MongoQS syntax
 	myIntField := NewQField("myInt")
 	myIntField.ParseAsInt() // parse query string values integers
 	myIntField.Sortable() // allow this field to be used in sorts
 	myIntField.Projectable() // allow this field to be used in projections
 	myFloatField := NewQField("myFloat")
-	myFloatField.ParseAsFloat().Sortable().Projectable() // same as calls on myIntField but chained
+	myFloatField.ParseAsFloat().Sortable().Projectable() // chained
 	myBoolField := NewQField("myBool")
 	myBoolField.ParseAsBool()
 	myDateTimeField := NewQField("myDateTime")
