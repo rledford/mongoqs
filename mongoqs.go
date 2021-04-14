@@ -130,7 +130,7 @@ const QObjectID QType = 5
 type QField struct {
 	Type QType // The data type expected when parsing the values of query parameter values
 	Key string // The target parameter in the request query string - supports dot notation for nested fields
-	Default func() bson.M // Function to run if this field is missing/is invalid
+	Default func() string // Function to run if this field is missing/is invalid - the result should be a string that the processor will parse into it's appropriate type for non-Meta fields
 	Validators []func() error // Functions to run to validate the field after it has been parsed
 	Aliases []string // List of aliases that can be used as alternatives to this QField.Key
 	TimeLayouts []string // Date parsing formats
@@ -282,7 +282,7 @@ func (f *QField) ApplyFilter(qvalue string, out *QResult) {
 	}
 }
 // UseDefault - Sets the Default method to the provided function. Returns caller for chaining.
-func (f *QField) UseDefault(fn func() bson.M) *QField{
+func (f *QField) UseDefault(fn func() string) *QField{
 	f.Default = fn
 	f.HasDefaultFunc = true
 	return f
@@ -292,7 +292,7 @@ func (f *QField) UseValidators(fn ...func() error) *QField {
 	f.Validators = append(f.Validators, fn...)
 	return f
 }
-// UseAlias - Adds one or more aliases to this field. Returns caller for chaining.
+// UseAliases - Adds one or more aliases to this field. Returns caller for chaining.
 func (f *QField) UseAliases(alias ...string) *QField {
 	f.Aliases = append(f.Aliases, alias...)
 	return f
@@ -310,6 +310,7 @@ func (f *QField) Sortable() *QField {
 
 // ParseAsMeta - Indicates that this field will not appear in the QResult Filter and will be parsed/interpreted outside of MongoQS
 func (f *QField) ParseAsMeta() *QField {
+	f.Type = QString
 	f.IsMeta = true
 	return f
 }
@@ -378,14 +379,26 @@ func NewQProcessor(fields ...QField) func (u url.Values) (QResult, error) {
 		case "":
 			log.Fatal(fmt.Sprintf("Field %q cannot be an empty string\n", f.Key))
 		case lmt, skp, srt, prj:
-			log.Fatal(fmt.Sprintf("Field %q is using a reserved key (e.g. %q, %q, %q, %q)\n", f.Key, lmt, skp, srt, prj))
+			log.Fatal(fmt.Sprintf("Field %q is using a reserved key - reserved keys: %q, %q, %q, %q\n", f.Key, lmt, skp, srt, prj))
 		}
 		for _, a := range f.Aliases {
 			switch a {
 			case "":
 				log.Fatal(fmt.Sprintf("Field %q alias cannot be an empty string\n", f.Key))
 			case lmt, skp, srt, prj:
-				log.Fatal(fmt.Sprintf("Field %q alias %q is using a reserved key (e.g. %q, %q, %q, %q)\n", f.Key, a, lmt, skp, srt, prj))
+				log.Fatal(fmt.Sprintf("Field %q alias %q is using a reserved key - reserved keys: %q, %q, %q, %q\n", f.Key, a, lmt, skp, srt, prj))
+			}
+		}
+		if f.IsMeta {
+			if f.Type != QString {
+				// Although meta fields are not processed the same as other fields, and having the Type set to something other than QString will not break the processor,
+				// developers should be told they are attempting to do something that will not work as expected since meta fields will always be parsed as QString
+				log.Fatal(fmt.Sprintf("Field %q is a meta field and can only be parsed as type QString", f.Key))
+			}
+			if f.IsSortable || f.IsProjectable {
+				// Although meta fields are not processed the same as other fields, and having the IsProjectable and IsSortable flags set will not break the processor,
+				// developers should be told they are attempting to do something that will not work as expected since meta fields will never appear in the QResult Sort property
+				log.Fatal(fmt.Sprintf("Field %q is a meta field and will never appear in Projection or Sort - modify %q to not be projectable or sortable\n", f.Key, f.Key))
 			}
 		}
 	}
@@ -449,17 +462,14 @@ func NewQProcessor(fields ...QField) func (u url.Values) (QResult, error) {
 					}
 				}
 			}
+			if qvalue == "" && field.HasDefaultFunc {
+				qvalue = field.Default()
+			}
 			if field.IsMeta {
 				if qvalue != "" {
 					result.Meta[field.Key] = qvalue
 				}
-				continue
-			}
-			if qvalue == "" {
-				// apply default if Default function was provided
-				if field.HasDefaultFunc {
-					result.Filter[field.Key] = field.Default()
-				}
+				// skip further logic as meta fields should not be used in projections, sorts, or filters
 				continue
 			}
 			// apply projections
