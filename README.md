@@ -13,6 +13,7 @@ MongoQS is a URL query string processor that converts query strings to MongoDB q
   - [Sort Operators](#sort-operators)
   - [Projection Operators](#projection-operators)
   - [Methods](#qfield-methods)
+  - [About Meta Fields](#about-meta-fields)
 - [Query Strings](#query-strings)
   - [Syntax](#syntax)
   - [Equal To](#equal-to)
@@ -33,7 +34,7 @@ MongoQS is a URL query string processor that converts query strings to MongoDB q
 - Supports common MongoDB operators
 - Ensures only the configured fields appear in resulting MongoDB filter
 - Supports projections
-- Supports multiple operators within a single field in a query string
+- Supports multiple operators on a single field in a query string
 - Allows one or more aliases for each field
 - Allows default functions that are used to set filters for fields that are missing or invalid
 - Supports safe regex searches
@@ -157,21 +158,16 @@ result, err := qproc(qs)
 
 Query fields (QField) are used to build query processors (QProcessor). It is recommended to use the _NewQueryField_ method when creating a new QField.
 
-| Property      | Type            | Description                                                                                                                                      |
-| ------------- | --------------- | ------------------------------------------------------------------------------------------------------------------------------------------------ |
-| Key           | string          | The key of the field in as it will appear in the query string. This should match the target field in the database schema.                        |
-| Type          | QType           | The type used when parsing query strings for this field                                                                                          |
-| Default       | \*func() bson.M | An optional pointer to a default function that will be used to set the filter for this field if the field is missing or if the value is invalid. |
-| Aliases       | []string        | A slice of strings that can be used as aliases for the field's key.                                                                              |
-| IsProjectable | Bool            | Whether the field is allowed in projections or not.                                                                                              |
-| IsSortable    | Bool            | Whether the field is allowed to be used to sort or not.                                                                                          |
-| IsMeta        | Bool            | Whether the field is used as a meta field. See [Meta Fields](#meta-fields)                                                                       |
-
-### Meta Fields
-
-Meta fields allow query parameters to be accepted by the processor but not added to the QResult Filter. The Meta values will appear in the QResult Meta property which is of type `map[string]string`. It is the developer's responsibility to parse and validate the Meta values in the QResult. Meta fields can be configured with aliases and a Default method.
-
-Meta fields may be useful for allowing clients to specify options, like allowing the request to specify a `pageMarker` (or similar) which would likely be the ObjectID of the last document in a previous query that the request handler could then use to modify the QResult Filter to include an additional parameter that queries the collection appropriately.
+| Property       | Type            | Description                                                                                                                 |
+| -------------- | --------------- | --------------------------------------------------------------------------------------------------------------------------- |
+| Key            | string          | The key of the field in as it will appear in the query string. This should match the target field in the database schema.   |
+| Type           | QType           | The type used when parsing query strings for this field                                                                     |
+| Default        | \*func() string | An optional function that will be used to set the filter for this field if the field is missing or if the value is invalid. |
+| Aliases        | []string        | A slice of strings that can be used as aliases for the field's key.                                                         |
+| IsProjectable  | Bool            | Whether the field is allowed in projections or not.                                                                         |
+| IsSortable     | Bool            | Whether the field is allowed to be used to sort or not.                                                                     |
+| IsMeta         | Bool            | Whether the field is used as a meta field. See [Meta Fields](#meta-fields)                                                  |
+| HasDefaultFunc | Bool            | Whether a Default function was set (call _UseDefaultFunc_ to set the Default function)                                      |
 
 ### Reserved Keys
 
@@ -234,6 +230,12 @@ All QField methods return \*QField so that the methods are chainable.
 | ParseAsDateTime |               | \*QField    | Instructs the processor to parse the field values as datetimes.                                                                                                                                                                                                                                                                                                                                                                                                                         |
 | ParseAsObjectID |               | \*QField    | Instructs the processor to parse the field values as ObjectIDs.                                                                                                                                                                                                                                                                                                                                                                                                                         |
 | ParseAsMeta     |               | \*QField    | Instructs the processor to parse the field value as a string and add it to the QResult Meta instead of thee QResult Filter.                                                                                                                                                                                                                                                                                                                                                             |
+
+### About Meta Fields
+
+Meta fields allow query parameters to be accepted by the processor but not added to the QResult Filter. The Meta values will appear in the QResult Meta property which is of type `map[string]string`. It is the developer's responsibility to parse and validate the Meta values in the QResult. Meta fields can be configured with aliases and a Default method.
+
+Meta fields may be useful for allowing clients to specify options, like allowing the request to specify a `pageMarker` (or similar) which would likely be the ObjectID of the last document in a previous query that the request handler could then use to modify the QResult Filter to include an additional parameter that queries the collection appropriately.
 
 ## Query Strings
 
