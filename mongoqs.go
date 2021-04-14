@@ -131,7 +131,7 @@ type QField struct {
 	Type QType // The data type expected when parsing the values of query parameter values
 	Key string // The target parameter in the request query string - supports dot notation for nested fields
 	Default func() string // Function to run if this field is missing/is invalid - the result should be a string that the processor will parse into it's appropriate type for non-Meta fields
-	Validators []func() error // Functions to run to validate the field after it has been parsed
+	// Validators []func() error // Functions to run to validate the field after it has been parsed
 	Aliases []string // List of aliases that can be used as alternatives to this QField.Key
 	TimeLayouts []string // Date parsing formats
 	IsProjectable bool // If true, this QField may be used for projections
@@ -287,11 +287,13 @@ func (f *QField) UseDefault(fn func() string) *QField{
 	f.HasDefaultFunc = true
 	return f
 }
+/*
 // UseValidators - Adds one or more validator functions to this field's Validators slice. Returns caller for chaining.
 func (f *QField) UseValidators(fn ...func() error) *QField {
 	f.Validators = append(f.Validators, fn...)
 	return f
 }
+*/
 // UseAliases - Adds one or more aliases to this field. Returns caller for chaining.
 func (f *QField) UseAliases(alias ...string) *QField {
 	f.Aliases = append(f.Aliases, alias...)
