@@ -8,7 +8,9 @@ import (
 
 func TestNewQProcessor(t *testing.T) {
 	// create and configure query fields
-	myStringField := NewQField("myString")
+	myStringField := NewQField("myString") // QType String is default so no call to ParseAsString is necessary
+	myStringFieldWithDefault := NewQField("testDefault")
+	myStringFieldWithDefault.UseDefault(func() string { return "slike:Something useful" })
 	myIntField := NewQField("myInt")
 	myIntField.ParseAsInt() // parse query string values integers
 	myIntField.Sortable() // allow this field to be used in sorts
@@ -25,7 +27,7 @@ func TestNewQProcessor(t *testing.T) {
 	myMetaField := NewQField("pageMarker")
 	myMetaField.ParseAsMeta()
 	// create a new query processor
-	qproc := NewQProcessor(myStringField, myIntField, myFloatField, myBoolField, myDateTimeField, myObjectIDField, myMetaField)
+	qproc := NewQProcessor(myStringField, myStringFieldWithDefault, myIntField, myFloatField, myBoolField, myDateTimeField, myObjectIDField, myMetaField)
 
 	// we'll use the net/url package's Values to construct query to process, but it would be more common to use one from an http request
 	qs := url.Values{}
