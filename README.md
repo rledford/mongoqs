@@ -143,14 +143,19 @@ if err == nil {
 
 Query fields (QField) are used to build query processors (QProcessor). It is recommended to use the _NewQueryField_ method when creating a new QField.
 
-| Property    | Type            | Description                                                                                                                                      |
-| ----------- | --------------- | ------------------------------------------------------------------------------------------------------------------------------------------------ |
-| Key         | string          | The key of the field in as it will appear in the query string. This should match the target field in the database schema.                        |
-| Type        | QType           | The type used when parsing query strings for this field                                                                                          |
-| Default     | \*func() bson.M | An optional pointer to a default function that will be used to set the filter for this field if the field is missing or if the value is invalid. |
-| Aliases     | []string        | A slice of strings that can be used as aliases for the field's key.                                                                              |
-| Projectable | Bool            | Whether the field is allowed in projections or not.                                                                                              |
-| Sortable    | Bool            | Whether the field is allowed to be used to sort or not.                                                                                          |
+| Property      | Type            | Description                                                                                                                                      |
+| ------------- | --------------- | ------------------------------------------------------------------------------------------------------------------------------------------------ |
+| Key           | string          | The key of the field in as it will appear in the query string. This should match the target field in the database schema.                        |
+| Type          | QType           | The type used when parsing query strings for this field                                                                                          |
+| Default       | \*func() bson.M | An optional pointer to a default function that will be used to set the filter for this field if the field is missing or if the value is invalid. |
+| Aliases       | []string        | A slice of strings that can be used as aliases for the field's key.                                                                              |
+| IsProjectable | Bool            | Whether the field is allowed in projections or not.                                                                                              |
+| IsSortable    | Bool            | Whether the field is allowed to be used to sort or not.                                                                                          |
+| IsMeta        | Bool            | Whether the field is used as a meta field. See [Meta Fields](#meta-fields)                                                                       |
+
+### Meta Fields
+
+Meta fields allow query parameters to be accepted by the processor but not added to the QResult Filter. The Meta values will appear in the QResult Meta property which is of type `map[string]string`. It is the developer's responsibility to parse and validate the Meta values in the QResult. Meta fields can be configured with aliases and a Default method.
 
 ### Reserved Keys
 
@@ -200,13 +205,19 @@ _NOTE:_ MongoDB does not support mixed include/exclude projections. The first op
 
 All QField methods return \*QField so that the methods are chainable.
 
-| Method         | Args            | Return Type | Description                                                                                                                                                        |
-| -------------- | --------------- | ----------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
-| DefaultFunc    | func() bson.M   | \*QField    | Sets the QField's Default function to the to run when the field is missing/is invalid in the query string. This also sets the _UseDefaultFunc_ property to `true`. |
-| ValidatorFuncs | ...func() error | \*QField    | Adds one or more validator functions to the QField's Validators property. Validators are run _after_ the query string is successfully parsed.                      |
-| UseAlias       | ...string       | \*QField    | Adds one or more aliases to the QField allowing it query strings to refer to the field without using its name                                                      |
-| IsProjectable  |                 | \*QField    | Allows the QField to be used in projections.                                                                                                                       |
-| IsSortable     |                 | \*QField    | Allows the QField to be used to sort.                                                                                                                              |
+| Method          | Args          | Return Type | Description                                                                                                                                                                                                                                                                                                                                                                                                                                                                             |
+| --------------- | ------------- | ----------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| UseDefault      | func() string | \*QField    | Sets the QField's Default function to run when the field is missing/is invalid in the query string. This also sets the _HasDefaultFunc_ property to `true`. If the field is to be parsed as _anything other than Meta_, the Default function must return a `string` using [MongoQS syntax](#syntax). Default functions for Meta fields _should not_ use MongoQS query string syntax as they will be parsed and validated by developers - see [Meta Fields](#meta-fields) for more info. |
+| UseAliases      | ...string     | \*QField    | Adds one or more aliases to the QField allowing it query strings to refer to the field without using its name                                                                                                                                                                                                                                                                                                                                                                           |
+| IsProjectable   |               | \*QField    | Allows the QField to be used in projections.                                                                                                                                                                                                                                                                                                                                                                                                                                            |
+| IsSortable      |               | \*QField    | Allows the QField to be used to sort.                                                                                                                                                                                                                                                                                                                                                                                                                                                   |
+| ParseAsString   |               | \*QField    | Instructs the processor to parse the field values as a strings.                                                                                                                                                                                                                                                                                                                                                                                                                         |
+| ParseAsInt      |               | \*QField    | Instructs the processor to parse the field values as an integers.                                                                                                                                                                                                                                                                                                                                                                                                                       |
+| ParseAsFloat    |               | \*QField    | Instructs the processor to parse the field values as floating point numbers.                                                                                                                                                                                                                                                                                                                                                                                                            |
+| ParseAsBool     |               | \*QField    | Instructs the processor to parse the field values as booleans.                                                                                                                                                                                                                                                                                                                                                                                                                          |
+| ParseAsDateTime |               | \*QField    | Instructs the processor to parse the field values as datetimes.                                                                                                                                                                                                                                                                                                                                                                                                                         |
+| ParseAsObjectID |               | \*QField    | Instructs the processor to parse the field values as ObjectIDs.                                                                                                                                                                                                                                                                                                                                                                                                                         |
+| ParseAsMeta     |               | \*QField    | Instructs the processor to parse the field value as a string and add it to the QResult Meta instead of thee QResult Filter.                                                                                                                                                                                                                                                                                                                                                             |
 
 ## Query Strings
 
@@ -260,13 +271,14 @@ Find documents where `int` is greater than `1` and less than or equal to `5`; so
 
 ## QResult
 
-| Property   | Type   | Default | Description                                          |
-| ---------- | ------ | ------- | ---------------------------------------------------- |
-| Filter     | bson.M | {}      | MongoDB query filter                                 |
-| Projection | bson.M | {}      | MongoDB field projection                             |
-| Sort       | bson.M | {}      | MongoDB sort criteria                                |
-| Limit      | int    | 0       | The number of documents to limit the query result to |
-| Skip       | int    | 0       | The number of documents to skip in the query result  |
+| Property   | Type                | Default | Description                                          |
+| ---------- | ------------------- | ------- | ---------------------------------------------------- |
+| Filter     | bson.M              | {}      | MongoDB query filter                                 |
+| Projection | bson.M              | {}      | MongoDB field projection                             |
+| Sort       | bson.M              | {}      | MongoDB sort criteria                                |
+| Limit      | int                 | 0       | The number of documents to limit the query result to |
+| Skip       | int                 | 0       | The number of documents to skip in the query result  |
+| Meta       | `map[string]string` | {}      | Key value pairs                                      |
 
 ## Backlog
 
