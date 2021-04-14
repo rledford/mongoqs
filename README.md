@@ -223,49 +223,49 @@ All QField methods return \*QField so that the methods are chainable.
 
 ### Syntax
 
-`?<field>=<operator>:<value>,<value>`
+`<field>=<operator>:<value>,<value>`
 
 ### Equal To
 
-`?int=1`
+`int=1`
 
-`?int=eq:1`
+`int=eq:1`
 
 ### Not Equal To
 
-`?int=ne:1`
+`int=ne:1`
 
 ### Greater Than, Less Than
 
-`?int=gt:1`
+`int=gt:1`
 
-`?int=lt:1`
+`int=lt:1`
 
 ### Greater Than Equal To, Less Than Equal To
 
-`?int=gte:1`
+`int=gte:1`
 
-`?int=lte:1`
+`int=lte:1`
 
 ### In, Not In, All
 
-`?int=in:1,2,3`
+`int=in:1,2,3`
 
-`?int=nin:1,2,3`
+`int=nin:1,2,3`
 
-`?int=all:1,2,3`
+`int=all:1,2,3`
 
 ### Like, Starts Like, Ends Like
 
-`?str=like:abc`
+`str=like:abc`
 
-`?str=slike:a`
+`str=slike:a`
 
-`?str=elike:bc`
+`str=elike:bc`
 
 ### Mixed
 
-`?int=gt:1,lte:5,str=like:abc,srt=-int,lmt=10,skp=100,prj=str`
+`int=gt:1,lte:5,str=like:abc,srt=-int,lmt=10,skp=100,prj=str`
 
 Find documents where `int` is greater than `1` and less than or equal to `5`; sort by `int` in descending order; limit the number of returned documents to `10`; skip the first `100` documents; only include `str` in the returned documents.
 
