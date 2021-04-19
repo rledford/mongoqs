@@ -82,6 +82,9 @@ func toOpValueMap(qvalue string, t QType) map[string][]string {
 	return result
 }
 
+// QueryProcessorFn - function signature for a query processor
+type QueryProcessorFn func(q url.Values) (QResult, error)
+
 // QResult - Query result containing Filter, Limit, Skip, Sort, and Projection parameters compatible with MongoDB.
 type QResult struct {
 	Filter bson.M // MongoDB filter
@@ -374,7 +377,7 @@ func NewQResult() QResult {
 }
 
 // NewQProcessor - Validates the provided QFields and returns a function that converts a URL query to a QResult.
-func NewQProcessor(fields ...QField) func (u url.Values) (QResult, error) {
+func NewQProcessor(fields ...QField) QueryProcessorFn {
 	// validate fields to ensures each field's Key and Aliases are not empty or using reserved values
 	for _, f := range fields {
 		switch f.Key {
