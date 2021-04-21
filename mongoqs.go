@@ -470,10 +470,12 @@ func NewQProcessor(fields ...QField) QueryProcessorFn {
 			if qvalue == "" && field.HasDefaultFunc {
 				qvalue = field.Default()
 			}
+			if qvalue == "" {
+				// skip to next field since no qvalue was found so it doesn't appear in the Filter at all
+				continue
+			}
 			if field.IsMeta {
-				if qvalue != "" {
-					result.Meta[field.Key] = qvalue
-				}
+				result.Meta[field.Key] = qvalue
 				// skip further logic as meta fields should not be used in projections, sorts, or filters
 				continue
 			}
