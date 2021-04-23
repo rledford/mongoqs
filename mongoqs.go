@@ -106,8 +106,8 @@ func (r *QResult) String() string {
 	%v
 	------------------
 	----- Paging -----
-	Limit:\t%d
-	Skip:\t%d
+	Limit:  %d
+	Skip:   %d
 	------------------
 	------ Meta ------
 	%v
