@@ -438,29 +438,6 @@ func NewQProcessor(fields ...QField) QueryProcessorFn {
 
 		// process fields
 		for _, field := range fields {
-			qvalue := query.Get(field.Key)
-			// search for applicable alias if field is not found by key
-			if qvalue == "" {
-				for _, a := range field.Aliases {
-					qvalue = query.Get(a)
-					if qvalue != "" {
-						// alias found - break loop
-						break
-					}
-				}
-			}
-			if qvalue == "" && field.HasDefaultFunc {
-				qvalue = field.Default()
-			}
-			if qvalue == "" {
-				// skip to next field since no qvalue was found so it doesn't appear in the Filter at all
-				continue
-			}
-			if field.IsMeta {
-				result.Meta[field.Key] = qvalue
-				// skip further logic as meta fields should not be used in projections, sorts, or filters
-				continue
-			}
 			// apply projections
 			if field.IsProjectable {
 				if _, ok := projections[field.Key]; ok {
@@ -484,6 +461,30 @@ func NewQProcessor(fields ...QField) QueryProcessorFn {
 						}
 					}
 				}
+			}
+			// apply values
+			qvalue := query.Get(field.Key)
+			// search for applicable alias if field is not found by key
+			if qvalue == "" {
+				for _, a := range field.Aliases {
+					qvalue = query.Get(a)
+					if qvalue != "" {
+						// alias found - break loop
+						break
+					}
+				}
+			}
+			if qvalue == "" && field.HasDefaultFunc {
+				qvalue = field.Default()
+			}
+			if qvalue == "" {
+				// skip to next field since no qvalue was found so it doesn't appear in the Filter at all
+				continue
+			}
+			if field.IsMeta {
+				result.Meta[field.Key] = qvalue
+				// skip further logic as meta fields should not be used in projections, sorts, or filters
+				continue
 			}
 			// apply filter
 			field.ApplyFilter(qvalue, &result)
